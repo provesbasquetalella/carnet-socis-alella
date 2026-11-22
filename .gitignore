@@ -1,0 +1,10 @@
+# SECRETS: mai a GitHub
+.env
+# Llistes de claus inicials (contenen contrasenyes)
+claus_inicials_*.csv
+# Fotos dels socis: dades personals
+fotos/*
+!fotos/.gitkeep
+# Python
+__pycache__/
+.venv/
