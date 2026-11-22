@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Carnet de soci · CB Alella (demo)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--bg:#f5f2ea;--fg:#0b261e;--panel:#fff;--line:#d8d2c2;--muted:#5b6f67;--acc:#F88018;--brand:#0B261E;--ok:#1a7f4b;--ko:#b3261e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1713;--fg:#f5f0e4;--panel:#12261f;--line:#2D5850;--muted:#9db2aa;--ok:#4cc38a;--ko:#ff7b72}}
+:root[data-theme="dark"]{--bg:#0b1713;--fg:#f5f0e4;--panel:#12261f;--line:#2D5850;--muted:#9db2aa;--ok:#4cc38a;--ko:#ff7b72}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--brand);color:#F5F0E4;padding:14px 16px;border-top:6px solid var(--acc)}
+header h1{margin:0;font-size:18px;letter-spacing:.5px}
+nav{display:flex;gap:8px;margin-top:10px}
+nav button{flex:1;padding:9px;border:1px solid #2D5850;background:transparent;color:#F5F0E4;border-radius:8px;font-size:14px;cursor:pointer}
+nav button.on{background:var(--acc);border-color:var(--acc);color:#0B261E;font-weight:700}
+main{max-width:620px;margin:0 auto;padding:16px}
+.note{font-size:13px;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:8px;padding:8px 10px;margin-bottom:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+h2{margin:0 0 10px;font-size:18px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:16px}
+button.p,button.s{padding:10px 14px;border-radius:8px;font-size:15px;cursor:pointer;margin:8px 8px 0 0;border:1px solid var(--line)}
+button.p{background:var(--acc);border-color:var(--acc);color:#0B261E;font-weight:700}
+button.s{background:transparent;color:var(--fg)}
+.err{color:var(--ko);font-size:14px;margin-top:8px;min-height:20px}
+canvas{width:100%;height:auto;border-radius:14px;display:block;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.small{font-size:12px;color:var(--muted);word-break:break-all}
+.res{border-radius:14px;padding:18px;text-align:center;margin-top:12px}
+.res.ok{background:var(--ok);color:#fff}.res.ko{background:var(--ko);color:#fff}
+.res img,.res .ph{width:140px;height:140px;border-radius:14px;object-fit:cover;margin:10px auto;display:block;background:rgba(255,255,255,.2)}
+.res .ph{display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:700}
+.res b{font-size:26px;display:block}.res .n{font-size:40px;font-weight:800}
+.row{display:flex;gap:8px;flex-wrap:wrap}.hide{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>CLUB BÀSQUET ALELLA · Carnet de soci</h1>
+  <nav><button id="t1" class="on" onclick="go('soci')">📱 Vista del soci</button><button id="t2" onclick="go('comerc')">🏪 Vista del comerç</button></nav>
+</header>
+<main>
+  <div class="note">Demostració amb dades inventades: es perden en recarregar la pàgina. A la versió real, el login, les dades i les fotos viuen a Supabase.</div>
+  <section id="soci"></section>
+  <section id="comerc" class="hide"></section>
+</main>
+<script>
+const NOMS=['Marta|Puig Ferrer','Jordi|Serra Vila','Núria|Camps Roca','Pau|Vidal Soler','Laia|Mas Bosch','Marc|Ribas Torres','Anna|Casals Prat','Oriol|Font Garriga','Clàudia|Martí Sala','Biel|Pons Esteve'];
+const socis=NOMS.map((s,i)=>{const [nom,cog]=s.split('|');return{num:String(i+1).padStart(4,'0'),nom,cog,clau:i===0?'1234':'provisional1',canvi:i!==0,estat:'activo',img:null,url:null}});
+const tokens={}; let cur=null, fails=0, lastRes=null;
+const $=id=>document.getElementById(id);
+const hex=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
+function actiu(s){return Object.keys(tokens).find(t=>tokens[t].s===s&&tokens[t].on)}
+function getToken(s){let t=actiu(s);if(!t){t=hex();tokens[t]={s,on:true}}return t}
+function regen(){const o=actiu(cur);if(o)tokens[o].on=false;const t=hex();tokens[t]={s:cur,on:true};renderSoci()}
+function go(v){$('soci').classList.toggle('hide',v!=='soci');$('comerc').classList.toggle('hide',v!=='comerc');$('t1').classList.toggle('on',v==='soci');$('t2').classList.toggle('on',v==='comerc');if(v==='comerc')renderComerc()}
+
+function renderSoci(){
+  const el=$('soci');
+  if(!cur){
+    el.innerHTML=`<div class="panel"><h2>Entra al teu carnet</h2>
+    <label>Número de soci</label><input id="num" inputmode="numeric" maxlength="4" placeholder="0001">
+    <label>Clau</label><input id="pw" type="password" placeholder="Clau" onkeydown="if(event.key==='Enter')login()">
+    <div class="err" id="e"></div><button class="p" onclick="login()">Entrar</button>
+    <p class="small">Usuari de prova: <b>0001</b> · clau <b>1234</b> (entra directe, sense canvi de clau).<br>Socis 0002 a 0010: clau inicial <b>provisional1</b> (obliga a canviar-la). Només a la demo; a la versió real cada soci en té una d’única.</p></div>`;
+    return}
+  if(cur.canvi){
+    el.innerHTML=`<div class="panel"><h2>Hola, ${cur.nom}. Canvia la clau</h2><p class="small">És el primer accés: cal triar una clau pròpia (mínim 10 caràcters).</p>
+    <label>Clau nova</label><input id="n1" type="password"><label>Repeteix-la</label><input id="n2" type="password">
+    <div class="err" id="e"></div><button class="p" onclick="canviClau()">Desar i continuar</button></div>`;
+    return}
+  const t=getToken(cur);
+  el.innerHTML=`<div class="panel"><div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">El teu carnet</h2><button class="s" onclick="cur=null;renderSoci()">Tancar sessió</button></div>
+  <div style="margin-top:12px"><canvas id="cv" width="1011" height="638"></canvas></div>
+  <div class="row"><button class="p" onclick="baixa()">⬇ Descarregar PNG</button><button class="s" onclick="if(confirm('El QR actual deixarà de funcionar. Continuar?'))regen()">🔄 Regenerar QR</button>
+  <label class="s" style="display:inline-block;cursor:pointer;margin:8px 0 0">📷 Pujar foto<input type="file" accept="image/jpeg,image/webp" class="hide" onchange="foto(this)"></label></div>
+  <p class="small">El QR porta aquest enllaç (token aleatori, mai el número de soci):<br>https://usuari.github.io/socis/verificar/?id=${t.slice(0,16)}…</p></div>
+  <div class="panel"><h2>Tauler de demo</h2><p class="small">Simula què passa quan el club canvia l’estat del soci i el comerç escaneja el QR.</p>
+  <label>Estat del soci (el decideix el club)</label>
+  <select onchange="cur.estat=this.value"><option value="activo">activo</option><option value="suspendido">suspendido</option><option value="baja">baja</option></select>
+  <button class="p" onclick="go('comerc');escaneja(actiu(cur))">Escanejar el meu QR com a comerç →</button></div>`;
+  el.querySelector('select').value=cur.estat;
+  paint();
+}
+function login(){const s=socis.find(x=>x.num===$('num').value.trim());
+  if(!s||s.clau!==$('pw').value){$('e').textContent='Número de soci o clau incorrectes.';return}
+  cur=s;renderSoci()}
+function canviClau(){const a=$('n1').value,b=$('n2').value;
+  if(a.length<10)return $('e').textContent='Mínim 10 caràcters.';
+  if(a===cur.clau)return $('e').textContent='La clau nova ha de ser diferent de la provisional.';
+  if(a!==b)return $('e').textContent='Les dues claus no coincideixen.';
+  cur.clau=a;cur.canvi=false;renderSoci()}
+function foto(inp){const f=inp.files[0];if(!f)return;
+  if(f.size>524288)return alert('La foto supera els 500 KB.');
+  const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{cur.img=i;cur.url=u;paint()};i.src=u}
+function baixa(){$('cv').toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='carnet-'+cur.num+'.png';a.click()})}
+
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function paint(){
+  const cv=$('cv'),c=cv.getContext('2d'),F='system-ui,Arial,sans-serif';
+  c.fillStyle='#0B261E';c.fillRect(0,0,1011,638);
+  c.fillStyle='#F88018';c.fillRect(0,0,1011,14);
+  c.fillStyle='#F5F0E4';c.font='bold 30px '+F;c.fillText('CLUB BÀSQUET ALELLA',50,78);
+  c.font='13px '+F;c.fillStyle='#BECDC6';c.fillText('(aquí anirà el logo de l’àguila)',50,100);
+  c.textAlign='right';c.fillStyle='#F88018';c.font='bold 30px '+F;c.fillText('CARNET DE SOCI',961,78);c.textAlign='left';
+  c.fillStyle='#2D5850';c.fillRect(50,120,911,3);
+  rr(c,50,160,270,270,24);c.fillStyle='#2D5850';c.fill();
+  if(cur.img){c.save();rr(c,50,160,270,270,24);c.clip();const k=Math.max(270/cur.img.width,270/cur.img.height),w=cur.img.width*k,h=cur.img.height*k;c.drawImage(cur.img,50+(270-w)/2,160+(270-h)/2,w,h);c.restore()}
+  else{c.fillStyle='#BECDC6';c.beginPath();c.arc(185,265,45,0,7);c.fill();c.beginPath();c.ellipse(185,400,80,65,0,Math.PI,0);c.fill()}
+  c.fillStyle='#BECDC6';c.font='22px '+F;c.fillText('NOM',360,190);
+  c.fillStyle='#F5F0E4';c.font='bold 42px '+F;c.fillText(cur.nom,360,240);c.fillText(cur.cog,360,290);
+  c.fillStyle='#BECDC6';c.font='22px '+F;c.fillText('Nº DE SOCI',360,370);
+  c.fillStyle='#F88018';c.font='bold 84px '+F;c.fillText(cur.num,360,450);
+  rr(c,725,335,236,236,18);c.fillStyle='#fff';c.fill();
+  const d=document.createElement('div');new QRCode(d,{text:'https://usuari.github.io/socis/verificar/?id='+getToken(cur),width:208,height:208,correctLevel:QRCode.CorrectLevel.M});
+  const q=d.querySelector('canvas');if(q)c.drawImage(q,739,349,208,208);
+  c.fillStyle='#BECDC6';c.font='22px '+F;c.fillText('Temporada 2026/27 · Escaneja el QR per verificar',50,604);
+}
+
+function renderComerc(){
+  $('comerc').innerHTML=`<div class="panel"><h2>Verificació per al comerç</h2>
+  <p class="small">Així ho veu qui escaneja el QR: sense login, només el mínim. A la versió real aquesta pàgina s’obre sola en escanejar.</p>
+  <label>Token del QR (simula l’escaneig)</label><input id="tk" placeholder="enganxa un token o usa els botons" value="${lastRes&&lastRes.t||''}">
+  <div class="row"><button class="p" onclick="escaneja($('tk').value.trim())">Verificar</button>
+  <button class="s" onclick="escaneja(hex())">Provar token inventat</button></div>
+  <p class="small">Intents fallits: ${fails}/5 (a la demo; a la real el límit és 20 cada 10 min per IP)</p>
+  <div id="res">${lastRes?lastRes.html:''}</div></div>`}
+function escaneja(t){
+  let html;
+  if(fails>=5)html=`<div class="res ko"><b>Massa intents</b>Torna-ho a provar d’aquí uns minuts.</div>`;
+  else{const r=tokens[t];
+    if(r&&r.on&&r.s.estat==='activo'){const s=r.s;
+      html=`<div class="res ok"><b>✔ SOCI ACTIU</b>${s.url?`<img src="${s.url}" alt="">`:`<div class="ph">${s.nom[0]}${s.cog[0]}</div>`}<div class="n">${s.num}</div><b style="font-size:22px">${s.nom} ${s.cog}</b><p style="margin:8px 0 0;font-size:14px">Comprova que la cara coincideix amb la persona.</p></div>`}
+    else{fails++;html=`<div class="res ko"><b>✖ NO VÀLID</b>QR no reconegut, revocat o soci no actiu.<br><small>(No es mostra cap dada.)</small></div>`}}
+  lastRes={t,html};renderComerc()}
+renderSoci();
+</script>
+</body>
+</html>
