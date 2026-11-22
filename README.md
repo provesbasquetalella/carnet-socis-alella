@@ -27,7 +27,7 @@ Fase 1 del projecte: base de dades, alta de socis i verificació del QR.
 
 ## Pas 2 · Donar d'alta els socis de prova
 
-1. A **Project Settings → API** copia la *Project URL* i la clau **service_role**.
+1. Copia la **Project URL** (botó **Connect** de dalt, o `https://<Reference ID>.supabase.co`, amb el *Reference ID* a *Project Settings → General*) i la **Secret key** (`sb_secret_...`, a *Project Settings → API Keys*; abans es deia *service_role*).
 2. Copia `.env.example` com a `.env` i omple els dos valors.
 3. Instal·la i executa (necessites Python 3.9+):
 
@@ -51,7 +51,7 @@ Amb la [Supabase CLI](https://supabase.com/docs/guides/cli) instal·lada:
 ```bash
 supabase login
 supabase link --project-ref EL_TEU_PROJECT_REF
-supabase secrets set ALLOWED_ORIGIN=https://EL_TEU_USUARI.github.io
+supabase secrets set CLAU_SECRETA=sb_secret_XXXX ALLOWED_ORIGIN=https://provesbasquetalella.github.io
 supabase functions deploy verificar --no-verify-jwt
 ```
 
@@ -86,7 +86,7 @@ Resultats esperats:
 
 1. Crea un repositori nou (pot ser públic: no conté dades personals).
 2. Puja **tota aquesta carpeta**. Abans, comprova que `.env` i `claus_inicials_*.csv` no apareixen a la llista de fitxers (`git status`).
-3. Si algun cop puges la clau `service_role` per error, **regenera-la** a Supabase immediatament.
+3. Si algun cop puges la clau secreta (`sb_secret_...`) per error, **regenera-la** a Supabase immediatament.
 
 ## Següent pas
 

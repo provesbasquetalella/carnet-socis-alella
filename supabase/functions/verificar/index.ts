@@ -1,6 +1,7 @@
 // Edge Function "verificar": comprova un token de QR i retorna les dades mínimes.
 // Desplegar amb:  supabase functions deploy verificar --no-verify-jwt
-// Secret recomanat: supabase secrets set ALLOWED_ORIGIN=https://EL_TEU_USUARI.github.io
+// Secrets: CLAU_SECRETA=sb_secret_...  i  ALLOWED_ORIGIN (adreça de la web)
+// Exemple: supabase secrets set ALLOWED_ORIGIN=https://EL_TEU_USUARI.github.io
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
@@ -37,7 +38,8 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    // Clau secreta pròpia (supabase secrets set CLAU_SECRETA=sb_secret_...) o, si no, la clàssica
+    Deno.env.get("CLAU_SECRETA") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
   const { data, error } = await supabase.rpc("verificar_token", { p_token: token, p_ip: ip });

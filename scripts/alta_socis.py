@@ -9,7 +9,7 @@ Llegeix un CSV (numero,nom,cognoms) i, per a cada soci:
 Al final desa una llista amb les claus per repartir: claus_inicials_<data>.csv
 
 S'executa NOMÉS a l'ordinador de l'administrador. Necessita la clau secreta
-(service_role) al fitxer .env, que MAI s'ha de pujar a GitHub.
+(secret key, abans «service_role») al fitxer .env, que MAI s'ha de pujar a GitHub.
 
 Ús:
   python scripts/alta_socis.py scripts/socis_proves.csv --dry-run   # prova sense crear res
@@ -75,11 +75,14 @@ def main():
 
     load_dotenv(RAIZ / ".env")
     url = (os.getenv("SUPABASE_URL") or "").rstrip("/")
-    clau_servei = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
+    clau_servei = os.getenv("SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
     if not url or not clau_servei:
-        sys.exit("Falta SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY al fitxer .env")
+        sys.exit("Falta SUPABASE_URL o SUPABASE_SECRET_KEY al fitxer .env")
 
-    H = {"apikey": clau_servei, "Authorization": f"Bearer {clau_servei}"}
+    # Les claus noves (sb_secret_...) NOMÉS van a la capçalera apikey; les antigues (JWT) també a Authorization
+    H = {"apikey": clau_servei}
+    if not clau_servei.startswith("sb_"):
+        H["Authorization"] = f"Bearer {clau_servei}"
     HJ = {**H, "Content-Type": "application/json"}
 
     resultats, errors = [], 0
