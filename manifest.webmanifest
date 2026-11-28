@@ -1,0 +1,22 @@
+{
+ "name": "Carnet de soci · CB Alella",
+ "short_name": "Carnet CBA",
+ "start_url": "./index.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#0B261E",
+ "theme_color": "#0B261E",
+ "lang": "ca",
+ "icons": [
+  {
+   "src": "img/icona-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "img/icona-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  }
+ ]
+}

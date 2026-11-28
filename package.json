@@ -1,0 +1,6 @@
+{
+  "name": "carnet-socis-alella",
+  "private": true,
+  "description": "Carnet digital de soci · CB Alella (proves automàtiques)",
+  "scripts": { "test": "node --test" }
+}

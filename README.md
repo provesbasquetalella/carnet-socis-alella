@@ -1,93 +1,107 @@
-# Carnet digital de soci · CB Alella
+# Carnet digital de soci · CB Alella (versió 4 · amb l'escut del club)
 
-Fase 1 del projecte: base de dades, alta de socis i verificació del QR.
-(La web amb login i targeta arriba al pas següent.)
+Web per a mòbil i ordinador (GitHub Pages) + Supabase. Targeta de la **temporada 2026/27** amb QR que es valida **en temps real**, i llistat d'**avantatges** (ofertes dels establiments vinculats) amb disseny de vals.
 
-## Què hi ha en aquest repositori
+## Com funciona el QR
+El QR porta `…/verificar.html?id=<token aleatori de 64 caràcters>`. Quan un comerç l'escaneja, la pàgina pregunta a Supabase **en aquell moment** i mostra:
+- **✔ SOCI ACTIU** (número, nom i foto) si el soci té estat `activo` **i** està al corrent de pagament (`vence` ≥ avui);
+- **✖ NO ACTIU** (cap dada, cap motiu) en qualsevol altre cas.
 
+El resultat es torna a comprovar sol cada 90 s i en tornar a la pestanya. La targeta no mostra res de l'estat ni del pagament.
+
+## Què hi ha
 | Fitxer | Per a què serveix |
 | --- | --- |
-| `supabase/01_esquema.sql` | Taules, regles d'accés (RLS), fotos privades i tokens de QR |
-| `supabase/02_verificacio.sql` | Funció de verificació del QR + límit d'intents |
-| `supabase/functions/verificar/index.ts` | Edge Function pública que comprova el QR i retorna les dades mínimes |
-| `scripts/alta_socis.py` | Crea usuaris, claus inicials úniques i fitxes de socis des d'un CSV |
-| `scripts/socis_proves.csv` | 10 socis inventats per fer proves |
-| `.env.example` | Plantilla de la configuració (copiar com a `.env`) |
+| `index.html`, `app.js`, `style.css` | Web del soci: login, canvi de clau, targeta, foto, regenerar QR, avantatges |
+| `verificar.html`, `verificar.js` | Pàgina pública que obre el comerç en escanejar el QR |
+| `config.js` | URL de Supabase, clau **pública**, adreça de la web i temporada (**l'has d'editar**) |
+| `avantatges.js` | Establiments i ofertes (editable; ara són d'**exemple**) |
+| `lib.js`, `qr.js`, `fons.svg` | Utilitats, generador de QR (MIT, sense CDN) i fons de pista |
+| `img/` | Escut del club en PNG transparent (`logo-crema`, `logo-taronja`, `logo-ocell`) i icones de l'app (`favicon`, `apple-touch-icon`, `icona-192/512`) |
+| `manifest.webmanifest` | Permet afegir el carnet a la pantalla d'inici del mòbil com una app |
+| `supabase/01…04_*.sql` | Base de dades (01, 02, 03 ja executats; **04 és nou**) |
+| `supabase/functions/verificar/index.ts` | Funció pública de verificació (reforçada) |
+| `scripts/` | Alta de socis i proves en directe (`provar_login.py`, `provar_seguretat.py`) |
+| `tests/`, `package.json` | Proves automàtiques (vegeu «Proves») |
 
-**Mai a GitHub:** `.env`, les llistes `claus_inicials_*.csv` i la carpeta `fotos/` amb fotos reals. El `.gitignore` ja ho bloqueja.
+**Mai a GitHub:** `.env`, `claus_inicials_*.csv`, `socis_privats*.csv` i fotos reals (el `.gitignore` ja ho bloqueja).
 
-## Pas 1 · Crear el projecte de Supabase (de PROVES)
+## Posar-ho en marxa (ordre)
 
-1. A supabase.com crea un projecte nou, **regió UE** (p. ex. Frankfurt).
-2. **Authentication → Sign In / Providers**:
-   - Desactiva **Allow new users to sign up** (només el club crea usuaris).
-   - A Email, posa la longitud mínima de contrasenya a **10**.
-3. **SQL Editor**: enganxa i executa **`01_esquema.sql`**, i després **`02_verificacio.sql`**.
-   Si dona error, copia'm el missatge i ho corregim (l'SQL no s'havia provat mai).
+### 1. Supabase · SQL
+SQL Editor → New query. Si no ho has fet, executa `03_pagament_i_temporada.sql`. Després executa **`04_enduriment.sql`**: al final ha de mostrar totes les taules amb `rls_activa = true`.
 
-## Pas 2 · Donar d'alta els socis de prova
+### 2. Supabase · funció `verificar`
+Edge Functions → `verificar` → editor → enganxa el nou `index.ts` → Deploy. Comprova:
+- **Verify JWT** desactivat;
+- secret `CLAU_SECRETA` = la teva secret key (`sb_secret_...`);
+- secret `ALLOWED_ORIGIN` = `https://provesbasquetalella.github.io` (només el domini).
 
-1. Copia la **Project URL** (botó **Connect** de dalt, o `https://<Reference ID>.supabase.co`, amb el *Reference ID* a *Project Settings → General*) i la **Secret key** (`sb_secret_...`, a *Project Settings → API Keys*; abans es deia *service_role*).
-2. Copia `.env.example` com a `.env` i omple els dos valors.
-3. Instal·la i executa (necessites Python 3.9+):
+### 3. Supabase · ajustos d'Authentication (cal fer-ho a mà)
+- Sign In / Providers → **Allow new users to sign up: desactivat**.
+- Email → **Minimum password length: 10**.
+- Si el teu pla ho permet, activa «Prevent use of leaked passwords».
+- Mantén el temps de vida del JWT en 3600 s (per defecte).
 
+### 4. `config.js`
+Posa la **Publishable key** (`sb_publishable_...`) on diu `POSA_AQUI_LA_TEVA_CLAU`. És pública.
+
+### 5. GitHub
+Add file → Upload files → **arrossega** tot el contingut de la carpeta (fitxers i carpetes) → Commit changes. Sobreescriu els antics. Els fitxers amagats (`.gitignore`, `.env.example`) es creen a mà amb *Create new file* si no s'han pujat. Comprova que NO hi ha `.env` ni `claus_inicials_*.csv`.
+
+### 6. GitHub Pages
+Settings → Pages → Deploy from a branch → `main` / `(root)` → Save. Adreça: `https://provesbasquetalella.github.io/carnet-socis-alella/`.
+
+> La CSP de les pàgines permet connexions a `https://*.supabase.co`. Si algun dia uses un domini propi a Supabase, cal canviar-ho a `index.html` i `verificar.html`.
+
+## Proves
+**Automàtiques (al teu ordinador, sense tocar Supabase)**
 ```bash
-pip install -r requirements.txt
-python scripts/alta_socis.py scripts/socis_proves.csv --dry-run   # només valida
-python scripts/alta_socis.py scripts/socis_proves.csv             # alta real
+node --test                                    # 34 proves: lògica, funció Edge, auditoria estàtica de seguretat i SQL
+pip install playwright opencv-python-headless pillow
+playwright install chromium
+python tests/e2e_navegador.py                  # 12 proves de navegador (login, QR, XSS, temps real, offline, responsiu…)
 ```
-
-Es crea el fitxer `claus_inicials_AAAAMMDD-HHMM.csv` amb la clau de cada soci.
-
-- L'usuari de cada soci és `<número>@socios.invalid`. Si Supabase rebutgés aquest domini, avisa'm i en triem un altre.
-- L'script es pot tornar a executar: salta els socis que ja existeixen.
-- **Fotos (opcional):** posa-les a `fotos/0001.jpg`, `fotos/0002.jpg`... (JPEG o WebP, màx. 500 KB) abans d'executar l'script.
-- Per fer-te **administrador**: a l'SQL Editor, `insert into public.admins(user_id) select id from auth.users where email = '0001@socios.invalid';` (canvia l'email pel de l'usuari que vulguis).
-
-## Pas 3 · Desplegar la verificació del QR
-
-Amb la [Supabase CLI](https://supabase.com/docs/guides/cli) instal·lada:
-
+**En directe contra el teu Supabase**
 ```bash
-supabase login
-supabase link --project-ref EL_TEU_PROJECT_REF
-supabase secrets set CLAU_SECRETA=sb_secret_XXXX ALLOWED_ORIGIN=https://provesbasquetalella.github.io
-supabase functions deploy verificar --no-verify-jwt
+python scripts/provar_login.py    claus_inicials_AAAAMMDD-HHMM.csv   # login i QR de cada soci
+python scripts/provar_seguretat.py claus_inicials_AAAAMMDD-HHMM.csv  # intents d'atac amb la clau pública (cal ≥ 2 socis)
+python scripts/provar_seguretat.py claus_inicials_AAAAMMDD-HHMM.csv --limit   # a més, el límit d'intents (bloqueja la teva IP uns 10 min)
 ```
+Necessiten al `.env`: `SUPABASE_URL` i `SUPABASE_PUBLISHABLE_KEY`. Vegeu `INFORME_PROVES.md` per al que s'ha provat i el que falta.
 
-`--no-verify-jwt` és necessari perquè els comerços l'han de poder cridar sense login.
-La URL serà `https://<project-ref>.supabase.co/functions/v1/verificar`.
-
-### Provar-la sense web
-
-Els tokens es creen quan el soci entra per primera vegada. Per provar-ho ara, genera'n un a mà a l'SQL Editor:
-
+## Gestió diària (SQL Editor, canviant el número de soci)
 ```sql
-insert into public.qr_tokens(token, socio_id)
-select replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''), id
-from public.socios where numero_socio = '0001'
-returning token;
+-- Ha pagat la temporada 26/27
+update public.socios_admin set vence = date '2027-06-30'
+ where socio_id = (select id from public.socios where numero_socio = '0011');
+-- Pagament pendent (el QR passa a NO ACTIU a l'instant)
+update public.socios_admin set vence = current_date - 1
+ where socio_id = (select id from public.socios where numero_socio = '0011');
+-- Suspendre
+update public.socios set estado = 'suspendido' where numero_socio = '0011';
+-- Veure l'estat de tothom
+select s.numero_socio, s.nombre, s.apellidos, s.estado, a.vence,
+       (s.estado = 'activo' and a.vence >= current_date) as qr_actiu
+  from public.socios s left join public.socios_admin a on a.socio_id = s.id order by s.numero_socio;
 ```
 
-I crida la funció amb el token que et surti:
+## Escut i icones
+L'escut surt a la capçalera, a la targeta (amb una filigrana de l'àguila), al login i al val del club. Es va crear a partir de `Icono3.jpg` (àguila horitzontal) i `Icono2.jpg` (àguila en diagonal), convertits a PNG transparents. Si el club té els originals en vectorial (SVG/AI), es poden substituir els fitxers de `img/` mantenint el nom. La icona d'aplicació és l'àguila taronja sobre verd fosc.
+Per instal·lar el carnet al mòbil: obre la web amb Chrome (Android) o Safari (iPhone) → «Afegeix a la pantalla d'inici».
 
+## Alta de socis nous
 ```bash
-curl -X POST https://<project-ref>.supabase.co/functions/v1/verificar \
-  -H "Content-Type: application/json" -d '{"token":"EL_TOKEN"}'
+python scripts/alta_socis.py scripts/socis_proves.csv --dry-run
+python scripts/alta_socis.py scripts/socis_proves.csv --vence 2027-06-30
 ```
+Necessita `.env` amb `SUPABASE_URL` i `SUPABASE_SECRET_KEY`. Es pot repetir: salta els socis que ja existeixen.
 
-Resultats esperats:
-- Soci actiu → `valid: true` + número, nom, cognoms i `foto_url` (caduca als 60 s).
-- Token inventat → `{"valid":false}` sense cap dada.
-- Després de 20 intents fallits en 10 min des de la mateixa IP → error 429.
-- Posa el soci en `suspendido` (`update public.socios set estado='suspendido' where numero_socio='0001';`) → `valid:false`.
+## Canviar els avantatges
+Edita `avantatges.js`. Cada oferta té: `cat` (club, alimentacio, vi, salut, esport), `nom`, `mono` (inicials), `categoria`, `color` (#RRGGBB), `tinta: "clara"` si el text sobre el color ha de ser blanc, `oferta`, `detalls`, i **o bé** `valor` + `valorText` (p. ex. "−20%" + "pa i brioixeria") **o bé** `pack: true` + `preuAntic` + `preuNou`. Quan siguin reals, posa `AVANTATGES_EXEMPLE = false`. Per a la temporada vinent, canvia `TEMPORADA` a `config.js`.
 
-## Pujar-ho a GitHub
-
-1. Crea un repositori nou (pot ser públic: no conté dades personals).
-2. Puja **tota aquesta carpeta**. Abans, comprova que `.env` i `claus_inicials_*.csv` no apareixen a la llista de fitxers (`git status`).
-3. Si algun cop puges la clau secreta (`sb_secret_...`) per error, **regenera-la** a Supabase immediatament.
-
-## Següent pas
-
-Web (GitHub Pages): login, canvi obligatori de clau, perfil, targeta descarregable amb QR, «regenerar QR» i pàgina de verificació per als comerços.
+## Seguretat (resum)
+- Clau **secreta** només al `.env` local i als secrets de Supabase. Si es filtra: crea'n una de nova i elimina l'antiga.
+- La clau pública a `config.js` és normal: la seguretat la donen les regles d'accés (RLS) i els privilegis mínims de `04_enduriment.sql`.
+- Pàgines amb CSP estricta (cap script ni estil en línia), tot el text de la base de dades s'escapa, la foto es torna a codificar abans de pujar-la.
+- El comerç només veu número, nom i foto d'un soci actiu; mai telèfon, email, quota ni el motiu d'un «NO ACTIU».
